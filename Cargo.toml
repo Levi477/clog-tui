@@ -1,0 +1,19 @@
+[package]
+name = "clog_tui"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+chrono = "0.4.41"
+clog_rs = "0.0.2"
+crossterm = "0.29.0"
+directories = "6.0.0"
+ratatui = "0.29.0"
+serde_json = "1.0.140"
+tempfile = "3.20.0"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
