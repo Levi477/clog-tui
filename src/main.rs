@@ -803,38 +803,56 @@ fn centered_rect(
 }
 
 fn edit_file_with_editor(content: &str) -> Result<String, Box<dyn std::error::Error>> {
+    // Create temp file but keep it persistent
     let mut temp_file = NamedTempFile::new()?;
+    let temp_path = temp_file.path().to_path_buf();
+
+    // Write content and flush to ensure it's written
     write!(temp_file, "{}", content)?;
+    temp_file.flush()?;
+
+    // Convert temp file to persistent file to avoid handle issues
+    let persistent_path = temp_file.into_temp_path();
 
     disable_raw_mode()?;
     execute!(io::stdout(), LeaveAlternateScreen)?;
 
     let editors = if cfg!(windows) {
-        vec!["notepad", "vim", "nano"]
+        // Use full path for notepad and add more Windows editors
+        vec!["notepad.exe", "code", "notepad++", "vim", "nano"]
     } else {
-        vec!["vim", "nano", "vi"]
+        vec!["vim", "nano", "vi", "emacs"]
     };
 
     let mut editor_found = false;
     let mut status = None;
 
     for editor in &editors {
-        if Command::new(editor).arg("--version").output().is_ok() || editor == &"notepad" {
-            status = Some(Command::new(editor).arg(temp_file.path()).status()?);
+        // Special handling for notepad
+        if editor == &"notepad.exe" {
+            status = Some(Command::new("notepad.exe").arg(&persistent_path).status()?);
             editor_found = true;
             break;
+        } else {
+            // Check if other editors exist
+            if Command::new(editor).arg("--version").output().is_ok() {
+                status = Some(Command::new(editor).arg(&persistent_path).status()?);
+                editor_found = true;
+                break;
+            }
         }
     }
 
+    // Fallback to environment variable or default
     if !editor_found {
         let editor = std::env::var("EDITOR").unwrap_or_else(|_| {
             if cfg!(windows) {
-                "notepad".to_string()
+                "notepad.exe".to_string()
             } else {
                 "vi".to_string()
             }
         });
-        status = Some(Command::new(&editor).arg(temp_file.path()).status()?);
+        status = Some(Command::new(&editor).arg(&persistent_path).status()?);
     }
 
     execute!(io::stdout(), EnterAlternateScreen)?;
@@ -846,11 +864,56 @@ fn edit_file_with_editor(content: &str) -> Result<String, Box<dyn std::error::Er
         }
     }
 
+    // Read the modified content
     let mut new_content = String::new();
-    std::fs::File::open(temp_file.path())?.read_to_string(&mut new_content)?;
+    std::fs::File::open(&persistent_path)?.read_to_string(&mut new_content)?;
+
+    // Clean up the temporary file
+    std::fs::remove_file(&persistent_path).ok(); // Ignore errors on cleanup
+
     Ok(new_content)
 }
 
+// Alternative approach using a regular file in temp directory
+fn edit_file_with_editor_alt(content: &str) -> Result<String, Box<dyn std::error::Error>> {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    // Create a unique filename in temp directory
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
+    let temp_dir = std::env::temp_dir();
+    let temp_file_path = temp_dir.join(format!("rust_editor_{}.txt", timestamp));
+
+    // Write content to file
+    std::fs::write(&temp_file_path, content)?;
+
+    disable_raw_mode()?;
+    execute!(io::stdout(), LeaveAlternateScreen)?;
+
+    // Launch notepad
+    let status = if cfg!(windows) {
+        Command::new("notepad.exe").arg(&temp_file_path).status()?
+    } else {
+        // Unix fallback
+        let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vi".to_string());
+        Command::new(&editor).arg(&temp_file_path).status()?
+    };
+
+    execute!(io::stdout(), EnterAlternateScreen)?;
+    enable_raw_mode()?;
+
+    if !status.success() {
+        std::fs::remove_file(&temp_file_path).ok();
+        return Err("Editor exited with non-zero status".into());
+    }
+
+    // Read modified content
+    let new_content = std::fs::read_to_string(&temp_file_path)?;
+
+    // Clean up
+    std::fs::remove_file(&temp_file_path).ok();
+
+    Ok(new_content)
+}
 fn show_message(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     message: &str,
