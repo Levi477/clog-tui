@@ -692,6 +692,9 @@ fn prompt_input_in_app(
 ) -> Result<Option<String>, Box<dyn std::error::Error>> {
     input_buffer.clear();
 
+    // Check if this is a password prompt
+    let is_password = prompt.to_lowercase().contains("password");
+
     loop {
         if app.should_render() {
             terminal.draw(|f| {
@@ -722,7 +725,14 @@ fn prompt_input_in_app(
                     );
                 f.render_widget(prompt_widget, chunks[0]);
 
-                let input_widget = Paragraph::new(input_buffer.as_str())
+                // Display asterisks for password, normal text otherwise
+                let display_text = if is_password {
+                    "*".repeat(input_buffer.len())
+                } else {
+                    input_buffer.clone()
+                };
+
+                let input_widget = Paragraph::new(display_text.as_str())
                     .style(Style::default().fg(Color::White))
                     .block(
                         Block::default()
@@ -777,7 +787,6 @@ fn prompt_input_in_app(
         }
     }
 }
-
 fn centered_rect(
     percent_x: u16,
     percent_y: u16,
