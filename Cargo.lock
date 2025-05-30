@@ -147,9 +147,9 @@ dependencies = [
 
 [[package]]
 name = "clog_rs"
-version = "0.0.4"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f81579e42bc92f8ae0c9d3847657263ec8f1a7e5dfab90d763d015c8922bf1fd"
+checksum = "6b7837ea01d02682665a6792f15afa164a0e5e6e6af7c942ba16f4a2a9de082c"
 dependencies = [
  "aes-gcm",
  "base64",
