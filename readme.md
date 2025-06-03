@@ -55,14 +55,13 @@ All your data is stored in a single `.clog` file inside your system's default ap
 **Default Locations:**
 
 - **Linux**:  
-  `~/.local/share/clog/<username>.clog`
+  `~/.local/share/com.levi.clog/<username>.clog`
 
 - **macOS**:  
-  `~/Library/Application Support/clog/<username>.clog`
+  `~/Library/Application Support/com.levi.clog/<username>.clog`
 
 - **Windows**:  
-  `%APPDATA%\clog\<username>.clog`  
-  (Typically `C:\Users\<user>\AppData\Roaming\clog\<username>.clog`)
+ `C:\Users\<user>\AppData\Roaming\levi\clog\data\<username>.clog`
 
 You can back up or move this file to any system — the app will load it automatically.
 
@@ -82,6 +81,7 @@ Prebuilt binaries are available in [Releases](https://github.com/Levi477/clog-tu
 ## 🛠️ Built With
 
 - [`ratatui`](https://github.com/ratatui-org/ratatui) – Terminal UI library
+- [`clog_rs`](https://github.com/Levi477/clog) - As a backend 
 - Rust 🦀 for performance and safety
 - End-to-end encryption
 
